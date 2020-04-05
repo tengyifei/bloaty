@@ -282,6 +282,9 @@ class ObjectFile {
       : file_data_(std::move(file_data)), debug_file_(this) {}
   virtual ~ObjectFile() {}
 
+  // Searches for a binary string representing the identity of this object file.
+  // It is typically a hash of the unstripped object during the build.
+  // If not found, returns an empty string.
   virtual std::string GetBuildId() const = 0;
 
   // Process this file, pushing data to |sinks| as appropriate for each data

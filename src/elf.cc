@@ -198,6 +198,10 @@ class ElfFile {
         : elf_(&section.elf()), remaining_(section.contents()) {
       Next();
     }
+    NoteIter(const Segment& segment, const ElfFile* elf)
+        : elf_(elf), remaining_(segment.contents()) {
+      Next();
+    }
 
     bool IsDone() const { return done_; }
     uint32_t type() const { return type_; }
@@ -1280,6 +1284,7 @@ class ElfObjectFile : public ObjectFile {
 
     ElfFile elf(file_data().data());
     assert(elf.IsOpen());
+    // Search for a build-id section.
     for (Elf64_Xword i = 1; i < elf.section_count(); i++) {
       ElfFile::Section section;
       elf.ReadSection(i, &section);
@@ -1288,6 +1293,20 @@ class ElfObjectFile : public ObjectFile {
       }
 
       for (ElfFile::NoteIter notes(section); !notes.IsDone(); notes.Next()) {
+        if (notes.name() == "GNU" && notes.type() == NT_GNU_BUILD_ID) {
+          return std::string(notes.descriptor());
+        }
+      }
+    }
+    // Search for a build-id segment.
+    for (Elf64_Xword i = 0; i < elf.header().e_phnum; i++) {
+      ElfFile::Segment segment;
+      elf.ReadSegment(i, &segment);
+      const auto &header = segment.header();
+      if (header.p_type != PT_NOTE) {
+        continue;
+      }
+      for (ElfFile::NoteIter notes(segment, &elf); !notes.IsDone(); notes.Next()) {
         if (notes.name() == "GNU" && notes.type() == NT_GNU_BUILD_ID) {
           return std::string(notes.descriptor());
         }
