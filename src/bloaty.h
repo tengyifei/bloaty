@@ -457,6 +457,7 @@ enum class OutputFormat {
   kPrettyPrint,
   kCSV,
   kTSV,
+  kFlatBuffers,
 };
 
 enum class ShowDomain {
@@ -493,6 +494,9 @@ struct RollupOutput {
         case bloaty::OutputFormat::kTSV:
           PrintToCSV(out, /*tabs=*/true);
           break;
+        case bloaty::OutputFormat::kFlatBuffers:
+          PrintToFlatBuffers(out);
+          break;
         default:
           BLOATY_UNREACHABLE();
       }
@@ -527,6 +531,7 @@ struct RollupOutput {
   static bool IsSame(const std::string& a, const std::string& b);
   void PrettyPrint(const OutputOptions& options, std::ostream* out) const;
   void PrintToCSV(std::ostream* out, bool tabs) const;
+  void PrintToFlatBuffers(std::ostream* out) const;
   void PrettyPrintRow(const RollupRow& row, size_t indent,
                       const OutputOptions& options, std::ostream* out) const;
   void PrettyPrintTree(const RollupRow& row, size_t indent,

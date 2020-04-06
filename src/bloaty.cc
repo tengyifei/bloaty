@@ -50,6 +50,7 @@
 #include "bloaty.h"
 #include "bloaty.pb.h"
 #include "demangle.h"
+#include "report_generated.h"
 
 using absl::string_view;
 
@@ -887,6 +888,29 @@ void RollupOutput::PrintToCSV(std::ostream* out, bool tabs) const {
   for (const auto& child_row : toplevel_row_.sorted_children) {
     PrintTreeToCSV(child_row, std::vector<std::string>(), out, tabs);
   }
+}
+
+void RollupOutput::PrintToFlatBuffers(std::ostream* out) const {
+  using namespace ::bloaty_report;
+  flatbuffers::FlatBufferBuilder builder(16 * 1024);
+  std::vector<flatbuffers::Offset<CompileUnit>> compile_unit_vector;
+  for (const auto& child_row : toplevel_row_.sorted_children) {
+    std::vector<flatbuffers::Offset<Symbol>> symbol_vector;
+    for (const auto& symbol_row : child_row.sorted_children) {
+      SizeInfo info(symbol_row.filesize, symbol_row.vmsize);
+      auto symbol = CreateSymbol(builder, &info, builder.CreateString(symbol_row.name));
+      symbol_vector.push_back(symbol);
+    }
+    SizeInfo info(child_row.filesize, child_row.vmsize);
+    auto symbols = builder.CreateVector(symbol_vector);
+    auto compile_unit = CreateCompileUnit(
+        builder, &info, symbols, builder.CreateString(child_row.name));
+    compile_unit_vector.push_back(compile_unit);
+  }
+  auto compile_units = builder.CreateVector(compile_unit_vector);
+  auto report = CreateReport(builder, compile_units, toplevel_row_.filesize, toplevel_row_.vmsize);
+  builder.Finish(report);
+  out->write(reinterpret_cast<char*>(builder.GetBufferPointer()), builder.GetSize());
 }
 
 // RangeMap ////////////////////////////////////////////////////////////////////
@@ -1931,6 +1955,8 @@ bool DoParseOptions(bool skip_unknown, int* argc, char** argv[],
       output_options->output_format = OutputFormat::kCSV;
     } else if (args.TryParseFlag("--tsv")) {
       output_options->output_format = OutputFormat::kTSV;
+    } else if (args.TryParseFlag("--fbs")) {
+      output_options->output_format = OutputFormat::kFlatBuffers;
     } else if (args.TryParseOption("-c", &option)) {
       std::ifstream input_file(std::string(option), std::ios::in);
       if (!input_file.is_open()) {
@@ -2052,6 +2078,14 @@ bool DoParseOptions(bool skip_unknown, int* argc, char** argv[],
       case ShowDomain::kShowBoth:
         options->set_sort_by(Options::SORTBY_BOTH);
         break;
+    }
+  }
+
+  if (output_options->output_format == OutputFormat::kFlatBuffers) {
+    if (options->data_source_size() != 2 ||
+        options->data_source()[0] != "compileunits" ||
+        options->data_source()[1] != "symbols") {
+      THROW("FlatBuffers output only supports '-d compileunits,symbols' for now");
     }
   }
 

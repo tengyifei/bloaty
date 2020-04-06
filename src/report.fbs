@@ -1,0 +1,25 @@
+namespace bloaty_report;
+
+struct SizeInfo {
+  fileActual:uint;
+  vmActual:uint;
+}
+
+table Symbol {
+  sizes:SizeInfo;
+  name:string;
+}
+
+table CompileUnit {
+  sizes:SizeInfo;
+  symbols:[Symbol];
+  name:string;
+}
+
+table Report {
+  compileUnits:[CompileUnit];
+  fileTotal:uint;
+  vmTotal:uint;
+}
+
+root_type Report;

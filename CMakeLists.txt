@@ -88,6 +88,7 @@ endif(UNIX)
 include_directories(.)
 include_directories(src)
 include_directories(third_party/abseil-cpp)
+include_directories(third_party/flatbuffers/include)
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/src")
 
 # Baseline build flags.
