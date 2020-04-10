@@ -51,6 +51,7 @@
 #include "bloaty.pb.h"
 #include "demangle.h"
 #include "report_generated.h"
+#include "rust_demangle.h"
 
 using absl::string_view;
 
@@ -248,11 +249,28 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
     demangle_from.remove_prefix(1);
   }
 
+  if (absl::StartsWith(demangle_from, "_R")) {
+    // Demangle Rust symbols
+    char* demangled = demangle_rust_symbol(demangle_from.data());
+    std::string ret(demangled);
+    recycle_demangle_result(demangled);
+    return ret;
+  }
+
   if (source == DataSource::kShortSymbols) {
-    char demangled[1024];
+    char demangled[4096];
     if (::Demangle(demangle_from.data(), demangled, sizeof(demangled))) {
       return std::string(demangled);
     } else {
+      // TODO(yifeit): Certain symbols have dots (".") in them. Those are not allowed.
+      auto pos = demangle_from.find(".");
+      if (pos != absl::string_view::npos) {
+        demangle_from.remove_suffix(demangle_from.length() - pos);
+        std::string shortened(demangle_from);
+        if (::Demangle(shortened.c_str(), demangled, sizeof(demangled))) {
+          return std::string(demangled);
+        }
+      }
       return std::string(symbol);
     }
   } else if (source == DataSource::kFullSymbols) {
@@ -263,6 +281,19 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
       free(demangled);
       return ret;
     } else {
+      // TODO(yifeit): Certain symbols have dots (".") in them. Those are not allowed.
+      auto pos = demangle_from.find(".");
+      if (pos != absl::string_view::npos) {
+        demangle_from.remove_suffix(demangle_from.length() - pos);
+        std::string shortened(demangle_from);
+        char* demangled =
+            __cxa_demangle(shortened.c_str(), NULL, NULL, NULL);
+        if (demangled) {
+          std::string ret(demangled);
+          free(demangled);
+          return ret;
+        }
+      }
       return std::string(symbol);
     }
   } else {
