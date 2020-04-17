@@ -257,6 +257,15 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
     return ret;
   }
 
+  if (absl::StartsWith(demangle_from, "switch.table._R")) {
+    // Demangle Rust symbols for switch tables
+    demangle_from.remove_prefix(13);
+    char* demangled = demangle_rust_symbol(demangle_from.data());
+    std::string ret(demangled);
+    recycle_demangle_result(demangled);
+    return "switch.table." + ret;
+  }
+
   if (source == DataSource::kShortSymbols) {
     char demangled[4096];
     if (::Demangle(demangle_from.data(), demangled, sizeof(demangled))) {
