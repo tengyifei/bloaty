@@ -15,7 +15,10 @@
 	url = https://github.com/aquynh/capstone.git
 [submodule "third_party/demumble"]
 	path = third_party/demumble
-	url = https://github.com/nico/demumble.git
+	url = https://github.com/tengyifei/demumble.git
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
 	url = https://github.com/google/flatbuffers.git
+[submodule "third_party/rustfilt"]
+	path = third_party/rustfilt
+	url = git@github.com:tengyifei/rustfilt.git

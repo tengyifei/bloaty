@@ -4,3 +4,14 @@
 /bloaty
 !tests/testdata/**
 *.dSYM
+.vscode
+.clangd
+/build
+/CMakeFiles
+CMakeCache.txt
+CTestTestfile.cmake
+Makefile
+bloaty_package.bloaty
+capstone.pc
+cmake_install.cmake
+compile_commands.json
