@@ -21,4 +21,4 @@
 	url = https://github.com/google/flatbuffers.git
 [submodule "third_party/rustfilt"]
 	path = third_party/rustfilt
-	url = git@github.com:tengyifei/rustfilt.git
+	url = https://github.com/tengyifei/rustfilt.git
