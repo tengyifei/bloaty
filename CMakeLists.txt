@@ -3,6 +3,7 @@ cmake_policy(SET CMP0048 NEW)
 project (Bloaty VERSION 1.0)
 project (Bloaty VERSION 1.1)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Options we define for users.
 option(BLOATY_ENABLE_ASAN "Enable address sanitizer." OFF)
