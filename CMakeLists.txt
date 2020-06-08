@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 cmake_policy(SET CMP0048 NEW)
-project (Bloaty VERSION 1.0)
 project (Bloaty VERSION 1.1)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Options we define for users.
@@ -95,11 +94,25 @@ include_directories(third_party/flatbuffers/include)
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/src")
 
 # Baseline build flags.
-set(CMAKE_CXX_FLAGS "-std=c++11 -W -Wall -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "-std=c++17 -W -Wall -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "-g1")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g1")
 set_source_files_properties(third_party/demumble/third_party/libcxxabi/cxa_demangle.cpp PROPERTIES COMPILE_FLAGS -Wno-implicit-fallthrough)
+
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions -frtti")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -frtti")
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+if(ipo_supported)
+    message(STATUS "IPO / LTO enabled")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
+else()
+    message(STATUS "IPO / LTO not supported: <${ipo_error}>")
+endif()
 
 if(APPLE)
 elseif(UNIX)
@@ -158,6 +171,7 @@ add_library(libbloaty STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/src/bloaty.pb.cc
     src/dwarf.cc
     src/elf.cc
+    src/link_map.cc
     src/macho.cc
     src/range_map.cc
     src/webassembly.cc
@@ -222,8 +236,18 @@ if(DEFINED ENV{LIB_FUZZING_ENGINE})
   add_executable(fuzz_target tests/fuzz_target.cc)
   target_link_libraries(fuzz_target "${LIBBLOATY_LIBS}" "${CMAKE_THREAD_LIBS_INIT}" $ENV{LIB_FUZZING_ENGINE})
 else()
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+
   add_executable(bloaty src/main.cc)
   target_link_libraries(bloaty "${LIBBLOATY_LIBS}")
+
+  if(ipo_supported)
+      message(STATUS "IPO / LTO enabled")
+      set_property(TARGET bloaty PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+      message(STATUS "IPO / LTO not supported: <${ipo_error}>")
+  endif()
 
   # All of this is to add -pthread, which is required by re2 (not us).
   find_package(Threads REQUIRED)
@@ -260,6 +284,7 @@ else()
       set(TEST_TARGETS
           bloaty_test
           bloaty_misc_test
+          link_map_test
           range_map_test
           )
 
@@ -273,6 +298,7 @@ else()
 
       file(GLOB fuzz_corpus tests/testdata/fuzz_corpus/*)
 
+      add_test(NAME link_map_test COMMAND link_map_test)
       add_test(NAME range_map_test COMMAND range_map_test)
       add_test(NAME bloaty_test_x86-64 COMMAND bloaty_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/linux-x86_64)
       add_test(NAME bloaty_test_x86 COMMAND bloaty_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/linux-x86)
