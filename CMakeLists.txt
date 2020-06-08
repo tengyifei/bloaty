@@ -100,8 +100,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g1")
 set_source_files_properties(third_party/demumble/third_party/libcxxabi/cxa_demangle.cpp PROPERTIES COMPILE_FLAGS -Wno-implicit-fallthrough)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions -frtti")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -frtti")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions -frtti -ffunction-sections -fdata-sections")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -frtti -ffunction-sections -fdata-sections")
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
@@ -113,6 +113,8 @@ if(ipo_supported)
 else()
     message(STATUS "IPO / LTO not supported: <${ipo_error}>")
 endif()
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
 
 if(APPLE)
 elseif(UNIX)
