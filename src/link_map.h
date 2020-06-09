@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -64,6 +65,47 @@ struct Symbol {
 // - Stripping of the binary will not relocate symbols, hence the addresses
 //   will be the same between a stripped and unstripped binary.
 std::vector<Symbol> ParseLldLinkMap(const std::string& content);
+
+// Transform the compile unit path parsed from link maps to a format
+// easier to organize, specialized to a Fuchsia build.
+// If the compile unit could not be understood by the transformer, it will
+// return `std::nullopt`. Since bloaty can still recover some compile unit
+// information from DWARF, we do not have to cover 100% here. For Rust however,
+// this allows setting a reasonable fallback compile unit at the crate level.
+// Therefore, the output of this transform should be inserted after the
+// usual DWARF-based compile unit data source.
+//
+// Examples:
+//
+// `./exe.unstripped/component_manager.alloc-54127f36ba192482.alloc.4k1iwrm2-cgu.0.rcgu.o.rcgu.o`
+// becomes `[crate: alloc]`.
+//
+// `./exe.unstripped/component_manager.libcomponent_manager_lib.component_manager_lib.3a1fbbbh-cgu.2.rcgu.o.rcgu.o`
+// becomes `[crate: component_manager_lib]`.
+//
+// `./exe.unstripped/component_manager.libcm_fidl_translator.cm_fidl_translator.3a1fbbbh-cgu.0.rcgu.o.rcgu.o`
+// becomes `[crate: cm_fidl_translator]`.
+//
+// `./exe.unstripped/component_manager.component_manager.7rcbfp3g-cgu.0.rcgu.o`
+// becomes `[crate: component_manager]`.
+//
+// `./exe.unstripped/component_manager.libfidl_fuchsia_io.fidl_fuchsia_io.3a1fbbbh-cgu.0.rcgu.o.rcgu.o`
+// becomes `[crate: fidl_fuchsia_io]`.
+//
+// `/usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/crt1.Scrt1.cc.o`
+// becomes `../../zircon/system/ulibc/c/Scrt1.cc`.
+//
+// `obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o`
+// becomes `fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block.fidl.tables.c`.
+//
+// `obj/zircon/system/uapp/blobfs/blobfs.main.cc.o`
+// becomes `../../zircon/system/uapp/blobfs/main.cc`
+//
+// `obj/zircon/system/ulib/trace-provider/libtrace-provider-with-fdio.a(libtrace-provider-with-fdio.fdio_connect.cc.o)`
+// is not suppported.
+//
+// `obj/zircon/public/lib/lz4/liblz4.a(liblz4.lz4hc.c.o)` is not supported.
+std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& compile_unit);
 
 }  // namespace bloaty_link_map
 

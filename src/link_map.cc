@@ -508,4 +508,44 @@ std::vector<Symbol> ParseLldLinkMap(const std::string& content) {
   return syms;
 }
 
+namespace {
+
+// ./exe.unstripped/component_manager.alloc-54127f36ba192482.alloc.4k1iwrm2-cgu.0.rcgu.o.rcgu.o
+re2::RE2 library_crate_regex(
+    R"(\/[a-zA-Z0-9_]+\.[a-zA-Z0-9_-]+\.([a-zA-Z0-9_]+)\.[a-zA-Z0-9-]+.*\.rcgu\.o$)");
+
+// ./exe.unstripped/component_manager.component_manager.7rcbfp3g-cgu.0.rcgu.o
+re2::RE2 bin_crate_regex(R"(\/[a-zA-Z0-9_-]+\.([a-zA-Z0-9_]+)\.[a-zA-Z0-9-]+.*\.rcgu\.o$)");
+
+// /usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/crt1.Scrt1.cc.o
+re2::RE2 zircon_lib_regex(R"(\/out\/[a-zA-Z0-9_-]+\.zircon\/.*\/obj\/system\/ulib\/(.*)\.o$)");
+
+// obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o
+re2::RE2 fidling_regex(R"(^obj\/out\/.*\/fidling\/gen\/(.*)\.o$)");
+
+// obj/zircon/system/uapp/blobfs/blobfs.main.cc.o
+re2::RE2 zircon_lib_regex2(R"(^obj\/zircon\/system\/(.*)\.o$)");
+
+}  // namespace
+
+std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& compile_unit) {
+  GUARD(library_crate_regex.ok()) { THROW("can't compile library crate regex"); }
+  {
+    std::string crate_name;
+    if (RE2::PartialMatch(compile_unit, library_crate_regex, &crate_name)) {
+      return "[crate: " + crate_name + "]";
+    }
+  }
+
+  GUARD(bin_crate_regex.ok()) { THROW("can't compile bin crate regex"); }
+  {
+    std::string crate_name;
+    if (RE2::PartialMatch(compile_unit, bin_crate_regex, &crate_name)) {
+      return "[crate: " + crate_name + "]";
+    }
+  }
+
+  return std::nullopt;
+}
+
 }  // namespace bloaty_link_map
