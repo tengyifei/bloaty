@@ -245,6 +245,10 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
     return std::string(symbol);
   }
 
+  if (absl::StartsWith(symbol, "OUTLINED_FUNCTION_")) {
+    return "** outlined function";
+  }
+
   string_view demangle_from = symbol;
   if (absl::StartsWith(demangle_from, "__Z")) {
     demangle_from.remove_prefix(1);
@@ -261,6 +265,15 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
   if (absl::StartsWith(demangle_from, "switch.table._R")) {
     // Demangle Rust symbols for switch tables
     demangle_from.remove_prefix(13);
+    char* demangled = demangle_rust_symbol(demangle_from.data());
+    std::string ret(demangled);
+    recycle_demangle_result(demangled);
+    return "switch.table." + ret;
+  }
+
+  if (absl::StartsWith(demangle_from, ".Lswitch.table._R")) {
+    // Demangle Rust symbols for switch tables
+    demangle_from.remove_prefix(15);
     char* demangled = demangle_rust_symbol(demangle_from.data());
     std::string ret(demangled);
     recycle_demangle_result(demangled);
@@ -949,6 +962,13 @@ void RollupOutput::PrintToFlatBuffers(std::ostream* out) const {
     for (const auto& symbol_row : child_row.sorted_children) {
       SizeInfo info(symbol_row.filesize, symbol_row.vmsize);
       auto symbol = CreateSymbol(builder, &info, builder.CreateString(symbol_row.name));
+      symbol_vector.push_back(symbol);
+    }
+    if (child_row.sorted_children.empty()) {
+      // Add a "fake symbol" that is the same as the compile unit,
+      // to make sizes add up
+      SizeInfo info(child_row.filesize, child_row.vmsize);
+      auto symbol = CreateSymbol(builder, &info, builder.CreateString(child_row.name));
       symbol_vector.push_back(symbol);
     }
     SizeInfo info(child_row.filesize, child_row.vmsize);
