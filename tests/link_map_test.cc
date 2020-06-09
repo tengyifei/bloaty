@@ -14,6 +14,8 @@
 
 #include "link_map.h"
 
+#include <fstream>
+
 #include "bloaty.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -880,6 +882,329 @@ TEST(LinkMapTest, ExampleRust) {
        "/tmp/rustcL27BaP/libunwind-e14dabfa3d8ce62b.rlib(libunwind.o)", ".bss"},
   };
 
+  // for (const auto& sym : symbols) {
+  //   std::cout << std::hex << "{0x" << sym.addr << ", 0x" << sym.size << ", \"" << sym.name
+  //             << "\", \"" << sym.compile_unit << "\", \"" << sym.section << "\"}," << std::endl;
+  // }
+
+  ASSERT_EQ(symbols.size(), goldens.size());
+  for (size_t i = 0; i < symbols.size(); i++) {
+    ASSERT_EQ(symbols[i].addr, goldens[i].addr);
+    ASSERT_EQ(symbols[i].size, goldens[i].size);
+    ASSERT_EQ(symbols[i].name, goldens[i].name);
+    ASSERT_EQ(symbols[i].compile_unit, goldens[i].compile_unit);
+    ASSERT_EQ(symbols[i].section, goldens[i].section);
+  }
+}
+
+TEST(LinkMapTest, SuperSizeGoldens) {
+  std::ifstream infile("test_lld-lto_v1.map");
+  std::string link_map;
+  for (std::string line; getline(infile, line);) {
+    if (line.empty()) continue;
+    if (line[0] == '#') continue;
+    link_map += line;
+    link_map += '\n';
+  }
+
+  absl::StripLeadingAsciiWhitespace(&link_map);
+  absl::StripTrailingAsciiWhitespace(&link_map);
+
+  struct Golden {
+    uint64_t addr;
+    uint64_t size;
+    std::string name;
+    std::string compile_unit;
+    std::string section;
+  };
+  std::vector<Golden> goldens = {
+      {0x213200, 0x4, "v8_Default_embedded_blob_size_", "obj/v8/v8_external_snapshot/embedded.o",
+       ".rodata"},
+      {0x213210, 0x10, "pmmp",
+       "obj/third_party/ffmpeg/libffmpeg_internal.a(ffmpeg_internal/fft_neon.o)", ".rodata"},
+      {0x213220, 0x10, "mppm",
+       "obj/third_party/ffmpeg/libffmpeg_internal.a(ffmpeg_internal/fft_neon.o)", ".rodata"},
+      {0x213230, 0xc0, "std::__ndk1::(anonymous namespace)::small_primes",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(hash.o)",
+       ".rodata"},
+      {0x2132f0, 0xc0, "std::__ndk1::(anonymous namespace)::indices",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(hash.o)",
+       ".rodata"},
+      {0x2133b0, 0x4, "std::__ndk1::ios_base::boolalpha",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133b4, 0x4, "std::__ndk1::ios_base::dec",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133b8, 0x4, "std::__ndk1::ios_base::fixed",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133bc, 0x4, "std::__ndk1::ios_base::hex",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133c0, 0x4, "std::__ndk1::ios_base::internal",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133c4, 0x4, "std::__ndk1::ios_base::left",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133c8, 0x4, "std::__ndk1::ios_base::oct",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133cc, 0x4, "std::__ndk1::ios_base::right",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133d0, 0x4, "std::__ndk1::ios_base::scientific",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133d4, 0x4, "std::__ndk1::ios_base::showbase",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133d8, 0x4, "std::__ndk1::ios_base::showpoint",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133dc, 0x4, "std::__ndk1::ios_base::showpos",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133e0, 0x4, "std::__ndk1::ios_base::skipws",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133e4, 0x4, "std::__ndk1::ios_base::unitbuf",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133e8, 0x4, "std::__ndk1::ios_base::uppercase",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133ec, 0x4, "std::__ndk1::ios_base::adjustfield",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133f0, 0x4, "std::__ndk1::ios_base::basefield",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133f4, 0x4, "std::__ndk1::ios_base::floatfield",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133f8, 0x4, "std::__ndk1::ios_base::badbit",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x2133fc, 0x4, "std::__ndk1::ios_base::eofbit",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213400, 0x4, "std::__ndk1::ios_base::failbit",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213404, 0x4, "std::__ndk1::ios_base::goodbit",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213408, 0x4, "std::__ndk1::ios_base::app",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x21340c, 0x4, "std::__ndk1::ios_base::ate",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213410, 0x4, "std::__ndk1::ios_base::binary",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213414, 0x4, "std::__ndk1::ios_base::in",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213418, 0x4, "std::__ndk1::ios_base::out",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x21341c, 0x4, "std::__ndk1::ios_base::trunc",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213420, 0x1d, "typeinfo name for std::__ndk1::ios_base::failure",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213440, 0x15, "typeinfo name for std::__ndk1::ios_base",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213460, 0x21, "typeinfo name for std::__ndk1::__iostream_category",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x213490, 0x2d, "_ZTSNSt6__ndk19basic_iosIcNS_11char_traitsIcEEEE",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".rodata"},
+      {0x21368b, 0x2c378e, "** lld merge strings", "", ".rodata"},
+      {0x4d6e20, 0x1b, "typeinfo name for std::__ndk1::__stdinbuf<wchar_t>",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(iostream.o)",
+       ".rodata"},
+      {0x4d7920, 0x266c, "** lld merge strings", "", ".rodata"},
+      {0x4d9f90, 0x18, "typeinfo name for std::__ndk1::ctype_base",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(locale.o)",
+       ".rodata"},
+      {0x4d9fb0, 0x1a, "typeinfo name for std::__ndk1::codecvt_base",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(locale.o)",
+       ".rodata"},
+      {0x503eb3, 0x1, "network::mojom::CookieManagerProxy_SetCanonicalCookie_Message::kMessageTag",
+       "", ".rodata"},
+      {0x503eb4, 0x1,
+       "network::mojom::CookieManagerProxy_DeleteCanonicalCookie_Message::kMessageTag", "",
+       ".rodata"},
+      {0x82f000, 0x40, "", "obj/third_party/boringssl/boringssl_asm/chacha-armv4.o", ".text"},
+      {0x82f040, 0x3f0, "ChaCha20_ctr32", "obj/third_party/boringssl/boringssl_asm/chacha-armv4.o",
+       ".text"},
+      {0x82f440, 0x89c, "ChaCha20_neon", "obj/third_party/boringssl/boringssl_asm/chacha-armv4.o",
+       ".text"},
+      {0x82fce0, 0x540, "AES_Te", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o", ".text"},
+      {0x830220, 0x60, "aes_nohw_encrypt", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o",
+       ".text"},
+      {0x830280, 0x1d8, "_armv4_AES_encrypt", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o",
+       ".text"},
+      {0x830460, 0x2a0, "aes_nohw_set_encrypt_key",
+       "obj/third_party/boringssl/boringssl_asm/aes-armv4.o", ".text"},
+      {0x830700, 0x20, "aes_nohw_set_decrypt_key",
+       "obj/third_party/boringssl/boringssl_asm/aes-armv4.o", ".text"},
+      {0x830720, 0x124, "AES_set_enc2dec_key",
+       "obj/third_party/boringssl/boringssl_asm/aes-armv4.o", ".text"},
+      {0x830860, 0x500, "AES_Td", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o", ".text"},
+      {0x830d60, 0x60, "aes_nohw_decrypt", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o",
+       ".text"},
+      {0x830dc0, 0x1f8, "_armv4_AES_decrypt", "obj/third_party/boringssl/boringssl_asm/aes-armv4.o",
+       ".text"},
+      {0x831000, 0x40, "", "obj/third_party/boringssl/boringssl_asm/aesv8-armx32.o", ".text"},
+      {0x831040, 0x218, "aes_hw_set_encrypt_key",
+       "obj/third_party/boringssl/boringssl_asm/aesv8-armx32.o", ".text"},
+      {0x831260, 0x60, "aes_hw_set_decrypt_key",
+       "obj/third_party/boringssl/boringssl_asm/aesv8-armx32.o", ".text"},
+      {0x8312c0, 0x50, "aes_hw_encrypt", "obj/third_party/boringssl/boringssl_asm/aesv8-armx32.o",
+       ".text"},
+      {0x831320, 0x50, "aes_hw_decrypt", "obj/third_party/boringssl/boringssl_asm/aesv8-armx32.o",
+       ".text"},
+      {0x83c640, 0x2e60, "v8_Default_embedded_blob_data_", "obj/v8/v8_external_snapshot/embedded.o",
+       ".text"},
+      {0x83f4a0, 0x320, "Builtins_RecordWrite", "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83f7c0, 0x40, "Builtins_AdaptorWithExitFrame", "obj/v8/v8_external_snapshot/embedded.o",
+       ".text"},
+      {0x83f800, 0x40, "Builtins_AdaptorWithBuiltinExitFrame",
+       "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83f840, 0x100, "Builtins_ArgumentsAdaptorTrampoline",
+       "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83f940, 0x100, "Builtins_CallFunction_ReceiverIsNullOrUndefined",
+       "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83fa40, 0x140, "Builtins_CallFunction_ReceiverIsNotNullOrUndefined",
+       "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83fb80, 0x180, "Builtins_CallFunction_ReceiverIsAny",
+       "obj/v8/v8_external_snapshot/embedded.o", ".text"},
+      {0x83fd00, 0x137820, "Builtins_CallBoundFunction", "obj/v8/v8_external_snapshot/embedded.o",
+       ".text"},
+      {0x977520, 0x18, "PushAllRegisters",
+       "obj/third_party/blink/renderer/platform/heap/asm/asm/SaveRegisters_arm.o", ".text"},
+      {0x97c834, 0x4dc, "vpx_convolve8_avg_horiz_filter_type1_neon",
+       "obj/third_party/libvpx/libvpx_assembly_arm.a(libvpx_assembly_arm/"
+       "vpx_convolve8_avg_horiz_filter_type1_neon.asm.o)",
+       ".text"},
+      {0x99cad8, 0xfc, "sinh",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libandroid_support.a(e_sinh.o)",
+       ".text"},
+      {0x1401788, 0xa4, "$_21::operator()(FamilyData*, char const*, char const**) const", "",
+       ".text"},
+      {0x1401820, 0x10, "UnlikelyFunc", "", ".text"},
+      {0x1401850, 0x10, "StartUpFunc", "", ".text"},
+      {0x2d4c000, 0x4, "v8_Default_embedded_blob_", "obj/v8/v8_external_snapshot/embedded.o",
+       ".data"},
+      {0x2d4c004, 0x4, "__dso_handle",
+       "../../third_party/android_ndk/platforms/android-16/arch-arm/usr/lib/crtbegin_so.o",
+       ".data"},
+      {0x2d69000, 0x3c, "fft_tab_vfp",
+       "obj/third_party/ffmpeg/libffmpeg_internal.a(ffmpeg_internal/fft_vfp.o)", ".data.rel.ro"},
+      {0x2d6903c, 0x3c, "fft_tab_neon",
+       "obj/third_party/ffmpeg/libffmpeg_internal.a(ffmpeg_internal/fft_neon.o)", ".data.rel.ro"},
+      {0x2d69078, 0x40,
+       "vtable for std::__ndk1::basic_streambuf<wchar_t, std::__ndk1::char_traits<wchar_t> >",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d690b8, 0x28,
+       "vtable for std::__ndk1::basic_istream<char, std::__ndk1::char_traits<char> >",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d690e0, 0x28,
+       "vtable for std::__ndk1::basic_istream<wchar_t, std::__ndk1::char_traits<wchar_t> >",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d69108, 0x28,
+       "vtable for std::__ndk1::basic_ostream<char, std::__ndk1::char_traits<char> >",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d69130, 0x28,
+       "vtable for std::__ndk1::basic_ostream<wchar_t, std::__ndk1::char_traits<wchar_t> >",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d69158, 0x24, "vtable for std::__ndk1::__iostream_category",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d6917c, 0x14, "vtable for std::__ndk1::ios_base::failure",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d69190, 0x10, "vtable for std::__ndk1::ios_base",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d691a0, 0xc, "typeinfo for std::__ndk1::ios_base::failure",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d691ac, 0x8, "typeinfo for std::__ndk1::ios_base",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2d691b4, 0xc, "typeinfo for std::__ndk1::__iostream_category",
+       "../../third_party/android_ndk/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/"
+       "libc++_static.a(ios.o)",
+       ".data.rel.ro"},
+      {0x2f56000, 0x4, "WebRtcSpl_CrossCorrelation", "", ".bss"},
+      {0x2f56004, 0x4, "WebRtcSpl_DownsampleFast", "", ".bss"},
+      {0x2f56008, 0x4, "WebRtcSpl_MaxAbsValueW16", "", ".bss"},
+      {0x0, 0x1000, "** ", "", ".part.end"},
+  };
+
+  auto symbols = bloaty_link_map::ParseLldLinkMap(link_map);
   // for (const auto& sym : symbols) {
   //   std::cout << std::hex << "{0x" << sym.addr << ", 0x" << sym.size << ", \"" << sym.name
   //             << "\", \"" << sym.compile_unit << "\", \"" << sym.section << "\"}," << std::endl;

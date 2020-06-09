@@ -300,7 +300,7 @@ else()
 
       file(GLOB fuzz_corpus tests/testdata/fuzz_corpus/*)
 
-      add_test(NAME link_map_test COMMAND link_map_test)
+      add_test(NAME link_map_test COMMAND link_map_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/link_map)
       add_test(NAME range_map_test COMMAND range_map_test)
       add_test(NAME bloaty_test_x86-64 COMMAND bloaty_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/linux-x86_64)
       add_test(NAME bloaty_test_x86 COMMAND bloaty_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/linux-x86)
