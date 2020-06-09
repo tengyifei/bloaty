@@ -498,10 +498,10 @@ std::vector<Symbol> ParseLldLinkMap(const std::string& content) {
   });
 
   if (promoted_name_count > 0) {
-    std::cout << "Found " << promoted_name_count << " promoted global names" << std::endl;
+    std::cerr << "Found " << promoted_name_count << " promoted global names" << std::endl;
   }
   if (jump_tables_count > 0) {
-    std::cout << "Found " << jump_tables_count << " CFI jump tables with " << jump_entries_count
+    std::cerr << "Found " << jump_tables_count << " CFI jump tables with " << jump_entries_count
               << "total entries" << std::endl;
   }
 
@@ -519,9 +519,9 @@ std::vector<Section> ParseLldLinkMapSections(const std::string& content) {
     // PROVIDE_HIDDEN lines.
     if (token.level == Level::k1) {
       sections.push_back(Section{
-        .name = std::string(token.tok),
-        .addr = token.address,
-        .size = token.size,
+          .name = std::string(token.tok),
+          .addr = token.address,
+          .size = token.size,
       });
     }
   });
@@ -538,11 +538,18 @@ re2::RE2 library_crate_regex(
 // ./exe.unstripped/component_manager.component_manager.7rcbfp3g-cgu.0.rcgu.o
 re2::RE2 bin_crate_regex(R"(\/[a-zA-Z0-9_-]+\.([a-zA-Z0-9_]+)\.[a-zA-Z0-9-]+.*\.rcgu\.o$)");
 
+// foobar.rlib(libregex_syntax-579ced0738b0164d-579ced0738b0164d.regex_syntax.c02sfxfu-cgu.13.rcgu.o)
+re2::RE2 rlib_crate_regex(R"(rlib\([a-zA-Z_\-0-9]+\.([a-zA-Z0-9_]+)\.[a-zA-Z0-9-]+.*\.rcgu\.o\)$)");
+
 // /usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/crt1.Scrt1.cc.o
 re2::RE2 zircon_lib_regex(R"(\/out\/[a-zA-Z0-9_-]+\.zircon\/.*\/obj\/system\/ulib\/(.*)\.o$)");
 
 // obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o
 re2::RE2 fidling_regex(R"(^obj\/out\/.*\/fidling\/gen\/(.*)\.o$)");
+
+// obj/zircon/public/lib/fidl_base/libfidl_base.a(libfidl_base.decoding.cc.o)
+re2::RE2 zircon_fidl_lib_regex(
+    R"(^obj\/zircon\/public\/lib\/fidl_base\/libfidl_base\.a\(libfidl_base\.(.*)\.cc\.o\)$)");
 
 // obj/zircon/system/uapp/blobfs/blobfs.main.cc.o
 re2::RE2 zircon_lib_regex2(R"(^obj\/zircon\/system\/(.*)\.o$)");
@@ -563,6 +570,53 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
     std::string crate_name;
     if (RE2::PartialMatch(compile_unit, bin_crate_regex, &crate_name)) {
       return "[crate: " + crate_name + "]";
+    }
+  }
+
+  GUARD(rlib_crate_regex.ok()) { THROW("can't compile rlib crate regex"); }
+  {
+    std::string crate_name;
+    if (RE2::PartialMatch(compile_unit, rlib_crate_regex, &crate_name)) {
+      return "[crate: " + crate_name + "]";
+    }
+  }
+
+  GUARD(zircon_lib_regex.ok()) { THROW("can't compile zircon lib regex"); }
+  {
+    std::string cc_path;
+    if (RE2::PartialMatch(compile_unit, zircon_lib_regex, &cc_path)) {
+      // Remove the prefix in last path component
+      // c/crt1.Scrt1.cc -> c/Scrt1.cc
+      static re2::RE2 prefix_regex(R"(\/[a-zA-Z0-9\-_]+\.([a-zA-Z0-9\-_]+\.(cc|c))$)");
+      if (RE2::Replace(&cc_path, prefix_regex, R"(/\1)")) {
+        return "../../zircon/system/ulib/" + cc_path;
+      }
+    }
+  }
+
+  GUARD(fidling_regex.ok()) { THROW("can't compile fidling regex"); }
+  {
+    std::string cc_path;
+    if (RE2::PartialMatch(compile_unit, fidling_regex, &cc_path)) {
+      // A: sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c
+      // B: sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block.fidl.tables.c
+      // A: sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/fuchsia.hardware.block_c_client.fidl.client.c
+      // B: sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/fidl.client.c
+      // A: sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fuchsia.io_llcpp.fidl.cc
+      // B: sdk/fidl/fuchsia.io/fuchsia/io/llcpp/fidl.cc
+      static re2::RE2 prefix_regex(
+          R"([a-zA-Z0-9\-\.]+_[a-zA-Z0-9\-_]+\.([a-zA-Z0-9\-\.]+\.(c|cc))$)");
+      if (RE2::Replace(&cc_path, prefix_regex, R"(\1)")) {
+        return "fidling/gen/" + cc_path;
+      }
+    }
+  }
+
+  GUARD(zircon_fidl_lib_regex.ok()) { THROW("can't compile zircon fidl lib regex"); }
+  {
+    std::string cc_name;
+    if (RE2::PartialMatch(compile_unit, zircon_fidl_lib_regex, &cc_name)) {
+      return "../../zircon/system/ulib/fidl/" + cc_name + ".cc";
     }
   }
 

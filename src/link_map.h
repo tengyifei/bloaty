@@ -100,11 +100,17 @@ std::vector<Section> ParseLldLinkMapSections(const std::string& content);
 // `./exe.unstripped/component_manager.libfidl_fuchsia_io.fidl_fuchsia_io.3a1fbbbh-cgu.0.rcgu.o.rcgu.o`
 // becomes `[crate: fidl_fuchsia_io]`.
 //
+// `/usr/local/google/home/yifeit/vg/out/default/obj/third_party/rust_crates/libregex_syntax-579ced0738b0164d.rlib(libregex_syntax-579ced0738b0164d-579ced0738b0164d.regex_syntax.c02sfxfu-cgu.13.rcgu.o)`
+// becomes `[crate: regex_syntax]`.
+//
 // `/usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/crt1.Scrt1.cc.o`
-// becomes `../../zircon/system/ulibc/c/Scrt1.cc`.
+// becomes `../../zircon/system/ulib/c/Scrt1.cc`.
 //
 // `obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o`
 // becomes `fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block.fidl.tables.c`.
+//
+// `obj/zircon/public/lib/fidl_base/libfidl_base.a(libfidl_base.decoding.cc.o)`
+// becomes `../../zircon/system/ulib/fidl/decoding.cc`
 //
 // `obj/zircon/system/uapp/blobfs/blobfs.main.cc.o`
 // becomes `../../zircon/system/uapp/blobfs/main.cc`

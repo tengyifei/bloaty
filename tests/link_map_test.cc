@@ -60,6 +60,63 @@ TEST(TransformCompileUnitForFuchsiaTest, RustBinaryCrate) {
   ASSERT_EQ(*result, "[crate: component_manager]");
 }
 
+TEST(TransformCompileUnitForFuchsiaTest, RustRLibCrate) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "/usr/local/google/home/yifeit/vg/out/default/obj/third_party/rust_crates/"
+      "libregex_syntax-579ced0738b0164d.rlib(libregex_syntax-579ced0738b0164d-579ced0738b0164d."
+      "regex_syntax.c02sfxfu-cgu.13.rcgu.o)");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(*result, "[crate: regex_syntax]");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, ZirconLib) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "/usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/"
+      "c/crt1.Scrt1.cc.o");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(*result, "../../zircon/system/ulib/c/Scrt1.cc");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, Fidling1) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/"
+      "fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(*result,
+            "fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block.fidl.tables.c");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, Fidling2) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/"
+      "fuchsia.hardware.block_c_client.fidl.client.c.o");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(*result,
+            "fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/fidl.client.c");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, Fidling3) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "obj/out/default/fidling/gen/sdk/fidl/fuchsia.security.resource/fuchsia/security/resource/"
+      "llcpp/fuchsia.security.resource_llcpp.fidl.cc.o");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(
+      *result,
+      "fidling/gen/sdk/fidl/fuchsia.security.resource/fuchsia/security/resource/llcpp/fidl.cc");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, ZirconFidlLib) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
+      "obj/zircon/public/lib/fidl_base/libfidl_base.a(libfidl_base.decoding.cc.o)");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(*result, "../../zircon/system/ulib/fidl/decoding.cc");
+}
+
+TEST(TransformCompileUnitForFuchsiaTest, PassthroughUnknown) {
+  auto result = bloaty_link_map::TransformCompileUnitForFuchsia("foobar");
+  ASSERT_FALSE(result.has_value());
+}
+
 std::string LoadLinkMapFile(const std::string& name) {
   std::ifstream infile(name);
   std::string link_map;

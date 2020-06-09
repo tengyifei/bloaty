@@ -1343,7 +1343,14 @@ class ElfObjectFile : public ObjectFile {
     if (!link_map_symbols_.has_value()) return;
     const auto& symbols = *link_map_symbols_;
     for (const auto& symbol : symbols) {
-      sink->AddVMRange("link_map", symbol.addr, symbol.size, symbol.name);
+      auto demangled = ItaniumDemangle(symbol.name, sink->data_source());
+      sink->AddVMRange("link_map", symbol.addr, symbol.size, demangled);
+    }
+
+    if (!link_map_sections_.has_value()) return;
+    const auto& sections = *link_map_sections_;
+    for (const auto& section : sections) {
+      sink->AddVMRange("link_map", section.addr, section.size, "[section " + section.name + "]");
     }
   }
 
@@ -1494,7 +1501,7 @@ std::unique_ptr<ObjectFile> TryOpenELFFile(std::unique_ptr<InputFile>& file,
   ArFile ar(file->data());
   if (elf.IsOpen() || ar.IsOpen()) {
     if (link_map_file.has_value()) {
-      std::cout << "Using link map: " << *link_map_file << std::endl;
+      std::cerr << "Using link map: " << *link_map_file << std::endl;
     }
     return std::unique_ptr<ObjectFile>(new ElfObjectFile(std::move(file), link_map_file));
   } else {
