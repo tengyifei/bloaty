@@ -311,7 +311,7 @@ class ObjectFile {
   const ObjectFile* debug_file_;
 };
 
-std::unique_ptr<ObjectFile> TryOpenELFFile(std::unique_ptr<InputFile>& file);
+std::unique_ptr<ObjectFile> TryOpenELFFile(std::unique_ptr<InputFile>& file, std::optional<std::string> link_map_file);
 std::unique_ptr<ObjectFile> TryOpenMachOFile(std::unique_ptr<InputFile>& file);
 std::unique_ptr<ObjectFile> TryOpenWebAssemblyFile(std::unique_ptr<InputFile>& file);
 

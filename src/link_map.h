@@ -66,6 +66,14 @@ struct Symbol {
 //   will be the same between a stripped and unstripped binary.
 std::vector<Symbol> ParseLldLinkMap(const std::string& content);
 
+struct Section {
+  std::string name;
+  uint64_t addr;
+  uint64_t size;
+};
+
+std::vector<Section> ParseLldLinkMapSections(const std::string& content);
+
 // Transform the compile unit path parsed from link maps to a format
 // easier to organize, specialized to a Fuchsia build.
 // If the compile unit could not be understood by the transformer, it will

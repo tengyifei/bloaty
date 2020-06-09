@@ -14,6 +14,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -1390,6 +1391,7 @@ class Bloaty {
 
   void AddFilename(const std::string& filename, bool base_file);
   void AddDebugFilename(const std::string& filename);
+  void AddLinkMapFilename(const std::string& filename);
 
   size_t GetSourceCount() const { return sources_.size(); }
 
@@ -1459,6 +1461,9 @@ class Bloaty {
   std::vector<InputFileInfo> input_files_;
   std::vector<InputFileInfo> base_files_;
   std::map<std::string, std::string> debug_files_;
+
+  // "foo" -> "some/path/foo.map"
+  std::map<std::string, std::string> link_map_files_;
 };
 
 Bloaty::Bloaty(const InputFileFactory& factory, const Options& options)
@@ -1469,7 +1474,15 @@ Bloaty::Bloaty(const InputFileFactory& factory, const Options& options)
 std::unique_ptr<ObjectFile> Bloaty::GetObjectFile(
     const std::string& filename) const {
   std::unique_ptr<InputFile> file(file_factory_.OpenFile(filename));
-  auto object_file = TryOpenELFFile(file);
+
+  namespace fs = std::filesystem;
+  std::string stem = fs::path(filename).stem();
+  std::optional<std::string> link_map_file;
+  if (link_map_files_.find(stem) != link_map_files_.end()) {
+    link_map_file = link_map_files_.at(stem);
+  }
+
+  auto object_file = TryOpenELFFile(file, link_map_file);
 
   if (!object_file.get()) {
     object_file = TryOpenMachOFile(file);
@@ -1505,6 +1518,12 @@ void Bloaty::AddDebugFilename(const std::string& filename) {
            filename);
   }
   debug_files_[build_id] = filename;
+}
+
+void Bloaty::AddLinkMapFilename(const std::string& filename) {
+  namespace fs = std::filesystem;
+  std::string stem = fs::path(filename).stem();
+  link_map_files_[stem] = filename;
 }
 
 void Bloaty::DefineCustomDataSource(const CustomDataSource& source) {
@@ -1876,6 +1895,10 @@ Options:
   -c FILE            Load configuration from <file>.
   -d SOURCE,SOURCE   Comma-separated list of sources to scan.
   --debug-file=FILE  Use this file for debug symbols and/or symbol table.
+  --link-map-file=FILE
+                     Use this file for identifying a link map associated with
+                     a binary. The link map and the binary must share the same
+                     base name (e.g. `foo.map` and `foo`)
   -C MODE            How to demangle symbols.  Possible values are:
   --demangle=MODE      --demangle=none   no demangling, print raw symbols
                        --demangle=short  demangle, but omit arg/return types
@@ -2060,6 +2083,8 @@ bool DoParseOptions(bool skip_unknown, int* argc, char** argv[],
       }
     } else if (args.TryParseOption("--debug-file", &option)) {
       options->add_debug_filename(std::string(option));
+    } else if (args.TryParseOption("--link-map-file", &option)) {
+      options->add_link_map_filename(std::string(option));
     } else if (args.TryParseUint64Option("--debug-fileoff", &uint64_option)) {
       if (options->has_debug_fileoff()) {
         THROW("currently we only support a single debug fileoff");
@@ -2200,6 +2225,10 @@ void BloatyDoMain(const Options& options, const InputFileFactory& file_factory,
 
   for (auto& debug_filename : options.debug_filename()) {
     bloaty.AddDebugFilename(debug_filename);
+  }
+
+  for (auto& link_map_filename : options.link_map_filename()) {
+    bloaty.AddLinkMapFilename(link_map_filename);
   }
 
   for (const auto& custom_data_source : options.custom_data_source()) {

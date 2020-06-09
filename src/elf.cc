@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "absl/numeric/int128.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/string_view.h"
@@ -22,6 +24,7 @@
 #include "re2/re2.h"
 #include "third_party/freebsd_elf/elf.h"
 #include "bloaty.h"
+#include "link_map.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -1273,8 +1276,27 @@ void AddCatchAll(RangeSink* sink) {
 
 class ElfObjectFile : public ObjectFile {
  public:
-  ElfObjectFile(std::unique_ptr<InputFile> file)
-      : ObjectFile(std::move(file)) {}
+  ElfObjectFile(std::unique_ptr<InputFile> file, std::optional<std::string> link_map_file)
+      : ObjectFile(std::move(file)) {
+    if (link_map_file.has_value()) {
+      std::ifstream infile(*link_map_file);
+      std::string link_map;
+
+      // Strip comments and empty lines.
+      for (std::string line; getline(infile, line);) {
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+        link_map += line;
+        link_map += '\n';
+      }
+
+      absl::StripLeadingAsciiWhitespace(&link_map);
+      absl::StripTrailingAsciiWhitespace(&link_map);
+
+      link_map_symbols_ = bloaty_link_map::ParseLldLinkMap(link_map);
+      link_map_sections_ = bloaty_link_map::ParseLldLinkMapSections(link_map);
+    }
+  }
 
   std::string GetBuildId() const override {
     if (IsObjectFile(file_data().data())) {
@@ -1317,6 +1339,31 @@ class ElfObjectFile : public ObjectFile {
     return std::string();
   }
 
+  void ReadLinkMapSymbols(RangeSink* sink) const {
+    if (!link_map_symbols_.has_value()) return;
+    const auto& symbols = *link_map_symbols_;
+    for (const auto& symbol : symbols) {
+      sink->AddVMRange("link_map", symbol.addr, symbol.size, symbol.name);
+    }
+  }
+
+  void ReadLinkMapCompileUnits(RangeSink* sink) const {
+    if (!link_map_symbols_.has_value()) return;
+    const auto& symbols = *link_map_symbols_;
+    for (const auto& symbol : symbols) {
+      auto transformed_compile_unit = bloaty_link_map::TransformCompileUnitForFuchsia(symbol.compile_unit);
+      if (transformed_compile_unit.has_value()) {
+        sink->AddVMRange("link_map", symbol.addr, symbol.size, *transformed_compile_unit);
+      }
+    }
+
+    if (!link_map_sections_.has_value()) return;
+    const auto& sections = *link_map_sections_;
+    for (const auto& section : sections) {
+      sink->AddVMRange("link_map", section.addr, section.size, "[section " + section.name + "]");
+    }
+  }
+
   void ProcessFile(const std::vector<RangeSink*>& sinks) const override {
     for (auto sink : sinks) {
       switch (sink->data_source()) {
@@ -1329,6 +1376,7 @@ class ElfObjectFile : public ObjectFile {
         case DataSource::kRawSymbols:
         case DataSource::kShortSymbols:
         case DataSource::kFullSymbols:
+          ReadLinkMapSymbols(sink);
           ReadELFSymbols(debug_file().file_data(), sink, nullptr, false);
           break;
         case DataSource::kArchiveMembers:
@@ -1349,6 +1397,7 @@ class ElfObjectFile : public ObjectFile {
           dwarf::File dwarf;
           ReadDWARFSections(debug_file().file_data(), &dwarf);
           ReadDWARFCompileUnits(dwarf, symtab, symbol_map, sink);
+          ReadLinkMapCompileUnits(sink);
           break;
         }
         case DataSource::kInlines: {
@@ -1431,15 +1480,23 @@ class ElfObjectFile : public ObjectFile {
     ReadElfArchMode(file_data(), &info->arch, &info->mode);
     return true;
   }
+
+ private:
+  std::optional<std::vector<bloaty_link_map::Symbol>> link_map_symbols_ = std::nullopt;
+  std::optional<std::vector<bloaty_link_map::Section>> link_map_sections_ = std::nullopt;
 };
 
 }  // namespace
 
-std::unique_ptr<ObjectFile> TryOpenELFFile(std::unique_ptr<InputFile>& file) {
+std::unique_ptr<ObjectFile> TryOpenELFFile(std::unique_ptr<InputFile>& file,
+                                           std::optional<std::string> link_map_file) {
   ElfFile elf(file->data());
   ArFile ar(file->data());
   if (elf.IsOpen() || ar.IsOpen()) {
-    return std::unique_ptr<ObjectFile>(new ElfObjectFile(std::move(file)));
+    if (link_map_file.has_value()) {
+      std::cout << "Using link map: " << *link_map_file << std::endl;
+    }
+    return std::unique_ptr<ObjectFile>(new ElfObjectFile(std::move(file), link_map_file));
   } else {
     return nullptr;
   }

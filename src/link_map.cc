@@ -508,6 +508,27 @@ std::vector<Symbol> ParseLldLinkMap(const std::string& content) {
   return syms;
 }
 
+std::vector<Section> ParseLldLinkMapSections(const std::string& content) {
+  std::vector<Section> sections;
+
+  std::istringstream lines(content);
+  std::string one_line;
+
+  Tokenize(lines, [&](const Token& token) {
+    // Level 1 data match the "Out" column. They specify sections or
+    // PROVIDE_HIDDEN lines.
+    if (token.level == Level::k1) {
+      sections.push_back(Section{
+        .name = std::string(token.tok),
+        .addr = token.address,
+        .size = token.size,
+      });
+    }
+  });
+
+  return sections;
+}
+
 namespace {
 
 // ./exe.unstripped/component_manager.alloc-54127f36ba192482.alloc.4k1iwrm2-cgu.0.rcgu.o.rcgu.o

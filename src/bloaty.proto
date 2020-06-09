@@ -29,6 +29,11 @@ message Options {
   // debug_filename will *not* have their file size counted.
   repeated string debug_filename = 10;
 
+  // Link map files to assist symbol and compile unit parsing.
+  // We will match these to files with the same base name / stem.
+  // E.g. "foo.map" will be used to analyze the executable "foo".
+  repeated string link_map_filename = 30;
+
   // The data sources to scan in each file.  At least one data source must be
   // specified.  If more than one source is specified, the output is
   // hierarchical.
