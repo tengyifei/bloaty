@@ -961,7 +961,13 @@ void RollupOutput::PrintToFlatBuffers(std::ostream* out) const {
     std::vector<flatbuffers::Offset<Symbol>> symbol_vector;
     for (const auto& symbol_row : child_row.sorted_children) {
       SizeInfo info(symbol_row.filesize, symbol_row.vmsize);
-      auto symbol = CreateSymbol(builder, &info, builder.CreateString(symbol_row.name));
+      auto maybe_crate = symbol_to_crate_.find(symbol_row.name);
+      std::string crate = "";
+      if (maybe_crate != symbol_to_crate_.end()) {
+        crate = maybe_crate->second;
+      }
+      auto symbol = CreateSymbol(builder, &info, builder.CreateString(symbol_row.name),
+                                 builder.CreateString(crate));
       symbol_vector.push_back(symbol);
     }
     if (child_row.sorted_children.empty()) {
@@ -1474,6 +1480,8 @@ class Bloaty {
   std::vector<ConfiguredDataSource*> sources_;
   std::vector<std::string> source_names_;
 
+  mutable std::unordered_map<std::string, std::string> symbol_to_crate_;
+
   struct InputFileInfo {
     std::string filename_;
     std::string build_id_;
@@ -1719,6 +1727,9 @@ void Bloaty::ScanAndRollupFile(const std::string &filename, Rollup* rollup,
       rollup->filtered_file_total();
   file->ProcessFile(sink_ptrs);
 
+  auto maybe_symbol_to_crate_map = file->TakeSymbolToCrateMap();
+  symbol_to_crate_ = std::move(*maybe_symbol_to_crate_map);
+
   // kInputFile source: Copy the base map to the filename sink(s).
   for (auto sink : filename_sink_ptrs) {
     maps.base_map()->vm_map.ForEachRange(
@@ -1853,8 +1864,10 @@ void Bloaty::ScanAndRollup(const Options& options, RollupOutput* output) {
     }
     ScanAndRollupFiles(base_filenames, &build_ids, &base);
     rollup.Subtract(base);
+    output->SetSymbolToCrateMap(symbol_to_crate_);
     rollup.CreateDiffModeRollupOutput(&base, options, output);
   } else {
+    output->SetSymbolToCrateMap(symbol_to_crate_);
     rollup.CreateRollupOutput(options, output);
   }
 

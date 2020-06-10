@@ -15,6 +15,7 @@
 #include "link_map.h"
 
 #include <fstream>
+#include <tuple>
 
 #include "bloaty.h"
 #include "gmock/gmock.h"
@@ -25,7 +26,8 @@ TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate1) {
       "./exe.unstripped/"
       "component_manager.alloc-54127f36ba192482.alloc.4k1iwrm2-cgu.0.rcgu.o.rcgu.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: alloc]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: alloc]");
+  ASSERT_EQ(*std::get<1>(*result), "alloc");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate2) {
@@ -34,7 +36,8 @@ TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate2) {
       "component_manager.libcomponent_manager_lib.component_manager_lib.3a1fbbbh-cgu.2.rcgu.o.rcgu."
       "o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: component_manager_lib]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: component_manager_lib]");
+  ASSERT_EQ(*std::get<1>(*result), "component_manager_lib");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate3) {
@@ -42,7 +45,8 @@ TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate3) {
       "./exe.unstripped/"
       "component_manager.libcm_fidl_translator.cm_fidl_translator.3a1fbbbh-cgu.0.rcgu.o.rcgu.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: cm_fidl_translator]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: cm_fidl_translator]");
+  ASSERT_EQ(*std::get<1>(*result), "cm_fidl_translator");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate4) {
@@ -50,14 +54,16 @@ TEST(TransformCompileUnitForFuchsiaTest, RustLibraryCrate4) {
       "./exe.unstripped/"
       "component_manager.libfidl_fuchsia_io.fidl_fuchsia_io.3a1fbbbh-cgu.0.rcgu.o.rcgu.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: fidl_fuchsia_io]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: fidl_fuchsia_io]");
+  ASSERT_EQ(*std::get<1>(*result), "fidl_fuchsia_io");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, RustBinaryCrate) {
   auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
       "./exe.unstripped/component_manager.component_manager.7rcbfp3g-cgu.0.rcgu.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: component_manager]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: component_manager]");
+  ASSERT_EQ(*std::get<1>(*result), "component_manager");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, RustRLibCrate) {
@@ -66,7 +72,8 @@ TEST(TransformCompileUnitForFuchsiaTest, RustRLibCrate) {
       "libregex_syntax-579ced0738b0164d.rlib(libregex_syntax-579ced0738b0164d-579ced0738b0164d."
       "regex_syntax.c02sfxfu-cgu.13.rcgu.o)");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "[crate: regex_syntax]");
+  ASSERT_EQ(std::get<0>(*result), "[crate: regex_syntax]");
+  ASSERT_EQ(*std::get<1>(*result), "regex_syntax");
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, ZirconLib) {
@@ -74,7 +81,8 @@ TEST(TransformCompileUnitForFuchsiaTest, ZirconLib) {
       "/usr/local/google/home/yifeit/vg/out/default.zircon/user-arm64-clang.shlib/obj/system/ulib/"
       "c/crt1.Scrt1.cc.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "../../zircon/system/ulib/c/Scrt1.cc");
+  ASSERT_EQ(std::get<0>(*result), "../../zircon/system/ulib/c/Scrt1.cc");
+  ASSERT_EQ(std::get<1>(*result), std::nullopt);
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, Fidling1) {
@@ -82,8 +90,9 @@ TEST(TransformCompileUnitForFuchsiaTest, Fidling1) {
       "obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/"
       "fuchsia.hardware.block_tables.fuchsia.hardware.block.fidl.tables.c.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result,
+  ASSERT_EQ(std::get<0>(*result),
             "fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia.hardware.block.fidl.tables.c");
+  ASSERT_EQ(std::get<1>(*result), std::nullopt);
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, Fidling2) {
@@ -91,8 +100,9 @@ TEST(TransformCompileUnitForFuchsiaTest, Fidling2) {
       "obj/out/default/fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/"
       "fuchsia.hardware.block_c_client.fidl.client.c.o");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result,
+  ASSERT_EQ(std::get<0>(*result),
             "fidling/gen/sdk/fidl/fuchsia.hardware.block/fuchsia/hardware/block/c/fidl.client.c");
+  ASSERT_EQ(std::get<1>(*result), std::nullopt);
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, Fidling3) {
@@ -101,15 +111,17 @@ TEST(TransformCompileUnitForFuchsiaTest, Fidling3) {
       "llcpp/fuchsia.security.resource_llcpp.fidl.cc.o");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(
-      *result,
+      std::get<0>(*result),
       "fidling/gen/sdk/fidl/fuchsia.security.resource/fuchsia/security/resource/llcpp/fidl.cc");
+  ASSERT_EQ(std::get<1>(*result), std::nullopt);
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, ZirconFidlLib) {
   auto result = bloaty_link_map::TransformCompileUnitForFuchsia(
       "obj/zircon/public/lib/fidl_base/libfidl_base.a(libfidl_base.decoding.cc.o)");
   ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(*result, "../../zircon/system/ulib/fidl/decoding.cc");
+  ASSERT_EQ(std::get<0>(*result), "../../zircon/system/ulib/fidl/decoding.cc");
+  ASSERT_EQ(std::get<1>(*result), std::nullopt);
 }
 
 TEST(TransformCompileUnitForFuchsiaTest, PassthroughUnknown) {

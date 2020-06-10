@@ -556,12 +556,13 @@ re2::RE2 zircon_lib_regex2(R"(^obj\/zircon\/system\/(.*)\.o$)");
 
 }  // namespace
 
-std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& compile_unit) {
+std::optional<std::tuple<std::string, std::optional<std::string>>> TransformCompileUnitForFuchsia(
+    const std::string& compile_unit) {
   GUARD(library_crate_regex.ok()) { THROW("can't compile library crate regex"); }
   {
     std::string crate_name;
     if (RE2::PartialMatch(compile_unit, library_crate_regex, &crate_name)) {
-      return "[crate: " + crate_name + "]";
+      return std::tuple{"[crate: " + crate_name + "]", crate_name};
     }
   }
 
@@ -569,7 +570,7 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
   {
     std::string crate_name;
     if (RE2::PartialMatch(compile_unit, bin_crate_regex, &crate_name)) {
-      return "[crate: " + crate_name + "]";
+      return std::tuple{"[crate: " + crate_name + "]", crate_name};
     }
   }
 
@@ -577,7 +578,7 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
   {
     std::string crate_name;
     if (RE2::PartialMatch(compile_unit, rlib_crate_regex, &crate_name)) {
-      return "[crate: " + crate_name + "]";
+      return std::tuple{"[crate: " + crate_name + "]", crate_name};
     }
   }
 
@@ -589,7 +590,7 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
       // c/crt1.Scrt1.cc -> c/Scrt1.cc
       static re2::RE2 prefix_regex(R"(\/[a-zA-Z0-9\-_]+\.([a-zA-Z0-9\-_]+\.(cc|c))$)");
       if (RE2::Replace(&cc_path, prefix_regex, R"(/\1)")) {
-        return "../../zircon/system/ulib/" + cc_path;
+        return std::tuple{"../../zircon/system/ulib/" + cc_path, std::nullopt};
       }
     }
   }
@@ -607,7 +608,7 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
       static re2::RE2 prefix_regex(
           R"([a-zA-Z0-9\-\.]+_[a-zA-Z0-9\-_]+\.([a-zA-Z0-9\-\.]+\.(c|cc))$)");
       if (RE2::Replace(&cc_path, prefix_regex, R"(\1)")) {
-        return "fidling/gen/" + cc_path;
+        return std::tuple{"fidling/gen/" + cc_path, std::nullopt};
       }
     }
   }
@@ -616,8 +617,13 @@ std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& com
   {
     std::string cc_name;
     if (RE2::PartialMatch(compile_unit, zircon_fidl_lib_regex, &cc_name)) {
-      return "../../zircon/system/ulib/fidl/" + cc_name + ".cc";
+      return std::tuple{"../../zircon/system/ulib/fidl/" + cc_name + ".cc", std::nullopt};
     }
+  }
+
+  // Rust-specific special casing...
+  if (absl::StartsWith(compile_unit, "obj/third_party/rust_crates/compat/ring/libring-core.a")) {
+    return std::tuple{"[crate: ring]", "ring"};
   }
 
   return std::nullopt;

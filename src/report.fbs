@@ -8,6 +8,7 @@ struct SizeInfo {
 table Symbol {
   sizes:SizeInfo;
   name:string;
+  maybe_rust_crate:string;
 }
 
 table CompileUnit {

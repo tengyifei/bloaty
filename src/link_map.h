@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace bloaty_link_map {
@@ -119,7 +120,8 @@ std::vector<Section> ParseLldLinkMapSections(const std::string& content);
 // is not suppported.
 //
 // `obj/zircon/public/lib/lz4/liblz4.a(liblz4.lz4hc.c.o)` is not supported.
-std::optional<std::string> TransformCompileUnitForFuchsia(const std::string& compile_unit);
+std::optional<std::tuple<std::string, std::optional<std::string>>> TransformCompileUnitForFuchsia(
+    const std::string& compile_unit);
 
 }  // namespace bloaty_link_map
 

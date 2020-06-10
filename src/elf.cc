@@ -1358,9 +1358,14 @@ class ElfObjectFile : public ObjectFile {
     if (!link_map_symbols_.has_value()) return;
     const auto& symbols = *link_map_symbols_;
     for (const auto& symbol : symbols) {
-      auto transformed_compile_unit = bloaty_link_map::TransformCompileUnitForFuchsia(symbol.compile_unit);
-      if (transformed_compile_unit.has_value()) {
-        sink->AddVMRange("link_map", symbol.addr, symbol.size, *transformed_compile_unit);
+      auto maybe_transformed_compile_unit = bloaty_link_map::TransformCompileUnitForFuchsia(symbol.compile_unit);
+      if (maybe_transformed_compile_unit.has_value()) {
+        auto [transformed_compile_unit, maybe_rust_crate] = *maybe_transformed_compile_unit;
+        sink->AddVMRange("link_map", symbol.addr, symbol.size, transformed_compile_unit);
+        if (maybe_rust_crate.has_value()) {
+          auto demangled = ItaniumDemangle(symbol.name, DataSource::kFullSymbols);
+          symbol_to_crate_[demangled] = *maybe_rust_crate;
+        }
       }
     }
 
@@ -1369,6 +1374,10 @@ class ElfObjectFile : public ObjectFile {
     for (const auto& section : sections) {
       sink->AddVMRange("link_map", section.addr, section.size, "[section " + section.name + "]");
     }
+  }
+
+  std::optional<std::unordered_map<std::string, std::string>> TakeSymbolToCrateMap() override {
+    return std::move(symbol_to_crate_);
   }
 
   void ProcessFile(const std::vector<RangeSink*>& sinks) const override {
@@ -1491,6 +1500,7 @@ class ElfObjectFile : public ObjectFile {
  private:
   std::optional<std::vector<bloaty_link_map::Symbol>> link_map_symbols_ = std::nullopt;
   std::optional<std::vector<bloaty_link_map::Section>> link_map_sections_ = std::nullopt;
+  mutable std::unordered_map<std::string, std::string> symbol_to_crate_ = {};
 };
 
 }  // namespace

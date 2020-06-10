@@ -296,6 +296,10 @@ class ObjectFile {
                                   DataSource symbol_source,
                                   DisassemblyInfo* info) const = 0;
 
+  virtual std::optional<std::unordered_map<std::string, std::string>> TakeSymbolToCrateMap() {
+    return std::nullopt;
+  }
+
   const InputFile& file_data() const { return *file_data_; }
 
   // Sets the debug file for |this|.  |file| must outlive this instance.
@@ -511,6 +515,10 @@ struct RollupOutput {
     disassembly_ = std::string(disassembly);
   }
 
+  void SetSymbolToCrateMap(std::unordered_map<std::string, std::string> symbol_to_crate) {
+    symbol_to_crate_ = std::move(symbol_to_crate);
+  }
+
   absl::string_view GetDisassembly() { return disassembly_; }
 
   // For debugging.
@@ -524,6 +532,7 @@ struct RollupOutput {
   std::vector<std::string> source_names_;
   RollupRow toplevel_row_;
   std::string disassembly_;
+  std::unordered_map<std::string, std::string> symbol_to_crate_;
 
   // When we are in diff mode, rollup sizes are relative to the baseline.
   bool diff_mode_ = false;

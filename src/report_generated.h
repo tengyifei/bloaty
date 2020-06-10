@@ -45,7 +45,8 @@ struct Symbol FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef SymbolBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SIZES = 4,
-    VT_NAME = 6
+    VT_NAME = 6,
+    VT_MAYBE_RUST_CRATE = 8
   };
   const bloaty_report::SizeInfo *sizes() const {
     return GetStruct<const bloaty_report::SizeInfo *>(VT_SIZES);
@@ -53,11 +54,16 @@ struct Symbol FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
   }
+  const flatbuffers::String *maybe_rust_crate() const {
+    return GetPointer<const flatbuffers::String *>(VT_MAYBE_RUST_CRATE);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<bloaty_report::SizeInfo>(verifier, VT_SIZES) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
+           VerifyOffset(verifier, VT_MAYBE_RUST_CRATE) &&
+           verifier.VerifyString(maybe_rust_crate()) &&
            verifier.EndTable();
   }
 };
@@ -71,6 +77,9 @@ struct SymbolBuilder {
   }
   void add_name(flatbuffers::Offset<flatbuffers::String> name) {
     fbb_.AddOffset(Symbol::VT_NAME, name);
+  }
+  void add_maybe_rust_crate(flatbuffers::Offset<flatbuffers::String> maybe_rust_crate) {
+    fbb_.AddOffset(Symbol::VT_MAYBE_RUST_CRATE, maybe_rust_crate);
   }
   explicit SymbolBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -86,8 +95,10 @@ struct SymbolBuilder {
 inline flatbuffers::Offset<Symbol> CreateSymbol(
     flatbuffers::FlatBufferBuilder &_fbb,
     const bloaty_report::SizeInfo *sizes = 0,
-    flatbuffers::Offset<flatbuffers::String> name = 0) {
+    flatbuffers::Offset<flatbuffers::String> name = 0,
+    flatbuffers::Offset<flatbuffers::String> maybe_rust_crate = 0) {
   SymbolBuilder builder_(_fbb);
+  builder_.add_maybe_rust_crate(maybe_rust_crate);
   builder_.add_name(name);
   builder_.add_sizes(sizes);
   return builder_.Finish();
@@ -96,12 +107,15 @@ inline flatbuffers::Offset<Symbol> CreateSymbol(
 inline flatbuffers::Offset<Symbol> CreateSymbolDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const bloaty_report::SizeInfo *sizes = 0,
-    const char *name = nullptr) {
+    const char *name = nullptr,
+    const char *maybe_rust_crate = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto maybe_rust_crate__ = maybe_rust_crate ? _fbb.CreateString(maybe_rust_crate) : 0;
   return bloaty_report::CreateSymbol(
       _fbb,
       sizes,
-      name__);
+      name__,
+      maybe_rust_crate__);
 }
 
 struct CompileUnit FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
