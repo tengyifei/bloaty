@@ -494,11 +494,11 @@ TEST(LinkMapTest, ExampleRust) {
        "hac033855e28d5eb4",
        "./exe.unstripped/component_manager.core-6a4b1e7af979d229.core.3ocx6h1n-cgu.0.rcgu.o.rcgu.o",
        ".text"},
-      {0xe2554, 0x10, "** outlined function",
+      {0xe2554, 0x10, "OUTLINED_FUNCTION_359",
        "./exe.unstripped/"
        "component_manager.libcm_fidl_translator.cm_fidl_translator.3a1fbbbh-cgu.0.rcgu.o.rcgu.o",
        ".text"},
-      {0xe2564, 0x10, "** outlined function",
+      {0xe2564, 0x10, "OUTLINED_FUNCTION_360",
        "./exe.unstripped/"
        "component_manager.libcm_fidl_translator.cm_fidl_translator.3a1fbbbh-cgu.0.rcgu.o.rcgu.o",
        ".text"},

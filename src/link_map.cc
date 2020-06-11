@@ -86,13 +86,6 @@ std::string StripLlvmPromotedGlobalNames(std::string_view name) {
 const std::string STRING_LITERAL_NAME = "string literal";
 
 std::string_view NormalizeName(std::string_view name) {
-  // Outlined functions have names like OUTLINED_FUNCTION_0, which can
-  // appear 1000+ time, and can cause false aliasing. We treat these as
-  // special cases by designating them as a placeholder symbols and
-  // renaming them to '** outlined function'.
-  if (absl::StartsWith(name, "OUTLINED_FUNCTION_")) {
-    return "** outlined function";
-  }
   if (absl::StartsWith(name, ".L.str")) {
     return STRING_LITERAL_NAME;
   }

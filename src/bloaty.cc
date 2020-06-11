@@ -245,10 +245,6 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
     return std::string(symbol);
   }
 
-  if (absl::StartsWith(symbol, "OUTLINED_FUNCTION_")) {
-    return "** outlined function";
-  }
-
   string_view demangle_from = symbol;
   if (absl::StartsWith(demangle_from, "__Z")) {
     demangle_from.remove_prefix(1);
