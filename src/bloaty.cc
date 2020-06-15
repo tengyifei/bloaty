@@ -52,7 +52,7 @@
 #include "bloaty.pb.h"
 #include "demangle.h"
 #include "report_generated.h"
-#include "rust_demangle.h"
+#include "rustc_demangle.h"
 
 using absl::string_view;
 
@@ -236,6 +236,22 @@ LineReader ReadLinesFromPipe(const std::string& cmd) {
   return LineReader(pipe, true);
 }
 
+namespace {
+
+std::string DemangleRustSymbol(std::string_view mangled) {
+  constexpr size_t kBufferSize = 8192;
+  std::unique_ptr<std::array<char, kBufferSize>> buffer =
+      std::make_unique<std::array<char, kBufferSize>>();
+  int result = rustc_demangle(mangled.data(), buffer->data(), kBufferSize);
+  if (result == 1) {
+    return std::string(buffer->data());
+  } else {
+    return "";
+  }
+}
+
+}  // namespace
+
 extern "C" char* __cxa_demangle(const char* mangled_name, char* buf, size_t* n,
                                 int* status);
 
@@ -252,28 +268,28 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
 
   if (absl::StartsWith(demangle_from, "_R")) {
     // Demangle Rust symbols
-    char* demangled = demangle_rust_symbol(demangle_from.data());
-    std::string ret(demangled);
-    recycle_demangle_result(demangled);
-    return ret;
+    std::string ret = DemangleRustSymbol(demangle_from);
+    if (!ret.empty()) {
+      return ret;
+    }
   }
 
   if (absl::StartsWith(demangle_from, "switch.table._R")) {
     // Demangle Rust symbols for switch tables
     demangle_from.remove_prefix(13);
-    char* demangled = demangle_rust_symbol(demangle_from.data());
-    std::string ret(demangled);
-    recycle_demangle_result(demangled);
-    return "switch.table." + ret;
+    std::string ret = DemangleRustSymbol(demangle_from);
+    if (!ret.empty()) {
+      return "switch.table." + ret;
+    }
   }
 
   if (absl::StartsWith(demangle_from, ".Lswitch.table._R")) {
-    // Demangle Rust symbols for switch tables
+    // Demangle Rust symbols for switch tables, with ".L" prefix.
     demangle_from.remove_prefix(15);
-    char* demangled = demangle_rust_symbol(demangle_from.data());
-    std::string ret(demangled);
-    recycle_demangle_result(demangled);
-    return "switch.table." + ret;
+    std::string ret = DemangleRustSymbol(demangle_from);
+    if (!ret.empty()) {
+      return "switch.table." + ret;
+    }
   }
 
   if (source == DataSource::kShortSymbols) {
@@ -282,6 +298,7 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
       return std::string(demangled);
     } else {
       // TODO(yifeit): Certain symbols have dots (".") in them. Those are not allowed.
+      // Find and remove the last "." and anything after.
       auto pos = demangle_from.find(".");
       if (pos != absl::string_view::npos) {
         demangle_from.remove_suffix(demangle_from.length() - pos);
@@ -301,6 +318,7 @@ std::string ItaniumDemangle(string_view symbol, DataSource source) {
       return ret;
     } else {
       // TODO(yifeit): Certain symbols have dots (".") in them. Those are not allowed.
+      // Find and remove the last "." and anything after.
       auto pos = demangle_from.find(".");
       if (pos != absl::string_view::npos) {
         demangle_from.remove_suffix(demangle_from.length() - pos);

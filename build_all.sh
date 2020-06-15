@@ -4,8 +4,8 @@ set -xeuf -o pipefail
 
 pushd "${0%/*}"
 
-pushd third_party/rustfilt
-cargo build --workspace --release
+pushd third_party/rustc-demangle
+cargo build -p rustc-demangle-capi --release
 popd
 
 rm -rf build
