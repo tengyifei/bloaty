@@ -19,6 +19,3 @@
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
 	url = https://github.com/google/flatbuffers.git
-[submodule "third_party/rustfilt"]
-	path = third_party/rustfilt
-	url = https://github.com/tengyifei/rustfilt.git
