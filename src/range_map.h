@@ -34,6 +34,7 @@
 
 #include <exception>
 #include <map>
+#include <stdexcept>
 #include <vector>
 
 #include "absl/strings/str_cat.h"
